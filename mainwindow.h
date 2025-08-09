@@ -11,6 +11,8 @@
 #include <QSplitter>
 #include <QMap>
 #include <QTextEdit>
+#include <QWidget>
+#include <QVector>
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -18,7 +20,7 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     QTextEdit  *leftTextEdit1, *rightTextEdit1;
-
+QVector<QPushButton*> buttons;
 private slots:
     void openLeftFile();
     void openRightFile();
@@ -43,6 +45,9 @@ private:
     // File paths
     QString leftFilePath, leftFilePath2;
     QString rightFilePath, rightFilePath2;
+
+
+
 };
 
 #endif // MAINWINDOW_H 

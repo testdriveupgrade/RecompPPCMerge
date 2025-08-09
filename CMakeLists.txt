@@ -12,6 +12,7 @@ add_executable(QtButtonGridApp
     main.cpp
     mainwindow.cpp
     mainwindow.h
+    CustomTextEdit.h
 
 )
 
