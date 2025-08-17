@@ -13,6 +13,20 @@
 #include <QTextEdit>
 #include <QWidget>
 #include <QVector>
+#include "idbutton.h"
+
+struct PPC{
+    int id=0;
+    QString name;
+    int sline=0;
+    int eline=1;
+    bool unique=true;
+    bool same=true;
+    bool filter;
+    QString content;
+
+};
+
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
@@ -20,10 +34,11 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     QTextEdit  *leftTextEdit1, *rightTextEdit1;
-QVector<QPushButton*> buttons;
+QVector<IdButton*> buttons;
 private slots:
     void openLeftFile();
     void openRightFile();
+    void mergeFile();
   //  void saveLeftFile();
  //   void saveRightFile();
     void about();
@@ -31,9 +46,11 @@ private slots:
     void quit();
   //  void handleSearchResultClicked(QListWidgetItem* item);
 
+
 private:
     void createMenus();
     void createLayout();
+     void loadCommands(const QString &filePath, QVector<PPC> &commands1, bool second);
     void loadFile(const QString &filePath, bool isLeft);
 //    void saveFile(const QString &filePath, bool isLeft, int quadrant = 0);
     void updateSearchResults();

@@ -11,20 +11,11 @@
 #include <QString>
 #include <QCoreApplication>
 #include <QSettings>
+
 //#include <QText>
-struct PPC{
-    int id=0;
-    QString name;
-    int sline=0;
-    int eline=1;
-    bool unique=true;
-    bool same=true;
-    bool filter;
-    QString content;
 
-};
 
-QVector<PPC> commands1, commands2;
+QVector<PPC> commands0, commands2;
 
 struct AppConfig {
     QString path1;
@@ -55,23 +46,21 @@ inline AppConfig loadConfig(const QString& iniFile) {
 }
 
 
-static QWidget* createScrollableButtonList(const QString& labelPrefix, QVector<QPushButton*> &buttons2,
-                                           QTextEdit *textEdit) {
+static QWidget* createScrollableButtonList(const QString& labelPrefix, QVector<IdButton*> &buttons2,
+                                           QTextEdit *textEdit, QVector<PPC> &commands1, bool second) {
     QWidget *listWidget = new QWidget;
     QVBoxLayout *layout = new QVBoxLayout(listWidget);
 
     for (int i = 0; i < commands1.length(); ++i) {
-        if(i==1){
-            textEdit->clear();
 
-             textEdit->append(commands1[i].content);
-        }
-      auto* pb2= new QPushButton(commands1[i].name);
+      auto* pb2= new IdButton( commands1[i].content,commands1[i].name, *textEdit);//,  m_content2, textEdit);
         buttons2.append(pb2);
         // if(i==2){
         QPalette palette = pb2->palette();
-        if(commands1[i].unique)
+        if(commands1[i].unique){
+            if(second) palette.setColor(QPalette::Button, QColor(Qt::green)); else
             palette.setColor(QPalette::Button, QColor(Qt::cyan));
+        }
         else if(commands1[i].same){
             palette.setColor(QPalette::Button, QColor(Qt::gray));
         }
@@ -79,9 +68,8 @@ static QWidget* createScrollableButtonList(const QString& labelPrefix, QVector<Q
             palette.setColor(QPalette::Button, QColor(Qt::yellow));
         }
 
-
-     //   if(commands1[i].filter)
-        //         palette.setColor(QPalette::Button, QColor(Qt::red));
+       if(commands1[i].filter)
+                palette.setColor(QPalette::Button, QColor(Qt::red));
 
         pb2->setPalette(palette);
         pb2->setAutoFillBackground(true);
@@ -89,44 +77,7 @@ static QWidget* createScrollableButtonList(const QString& labelPrefix, QVector<Q
 
         layout->addWidget(pb2);
 
-/*
-        connect(pb2, &QPushButton::clicked, textEdit){//, this, [this,pb2,i]){
-
-            textEdit->append("works");
-        }
-*/
     }
-
-    layout->addStretch();
-    return listWidget;
-}
-
-static QWidget* createScrollableButtonList2(const QString& labelPrefix) {
-    QWidget *listWidget = new QWidget;
-    QVBoxLayout *layout = new QVBoxLayout(listWidget);
-
-        for (int i = 0; i < commands2.length(); ++i) {
-            QPushButton *pb2= new QPushButton(commands2[i].name);
-             QPalette palette = pb2->palette();
-            if(commands2[i].unique)
-                 palette.setColor(QPalette::Button, QColor(Qt::green));
-            else if(commands2[i].same){
-                 palette.setColor(QPalette::Button, QColor(Qt::gray));
-            }
-            else {
-               palette.setColor(QPalette::Button, QColor(Qt::yellow));
-            }
-
-             if(commands2[i].filter)
-                      palette.setColor(QPalette::Button, QColor(Qt::red));
-
-
-         pb2->setPalette(palette);
-            pb2->setAutoFillBackground(true);
-            pb2->repaint();
-
-            layout->addWidget(pb2);
-        }
 
     layout->addStretch();
     return listWidget;
@@ -142,6 +93,9 @@ void MainWindow::createMenus()
 
     QAction *openRightAct = fileMenu->addAction(tr("Open Right..."), this, &MainWindow::openRightFile);
     openRightAct->setShortcut(tr("Ctrl+Shift+O"));
+
+    QAction *mergeAct = fileMenu->addAction(tr("&Let's Merge!!!"), this, &MainWindow::mergeFile);
+    mergeAct->setShortcut(tr("Ctrl+M"));
     /*
     fileMenu->addSeparator();
 
@@ -158,16 +112,149 @@ void MainWindow::createMenus()
 
     helpMenu = menuBar()->addMenu(tr("&Filter"));
 
- helpMenu = menuBar()->addMenu(tr("&Let's Merge!!!"));
+// helpMenu = menuBar()->addMenu(tr("&Let's Merge!!!"));
     // Create Help menu
     helpMenu = menuBar()->addMenu(tr("&Help"));
     QAction *aboutAct = helpMenu->addAction(tr("&About"), this, &MainWindow::about);
 }
 
+void MainWindow::mergeFile()
+{
 
+    QString wfileName = "D:/MT2/qt_project/recompiler.cpp"; // Or provide a full path
+    QFile wfile(wfileName);
+    if (!wfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        // Handle error: file could not be opened
+        qDebug() << "Could not open file for writing.";
+        return;
+    }
+    QTextStream out(&wfile);
+//     for (int i=0; i<commands2.length(); i++)
+//     {
+//     out << commands2[i].content;
+//     out <<Qt::endl;
+//      out <<Qt::endl;
+// }
+//     for (int i=0; i<commands0.length(); i++)
+//          if(commands0[i].unique){
+//         out << commands0[i].content;
+//     out <<Qt::endl;
+//     out <<Qt::endl;
+//          }
+
+    for (int i=0; i<commands0.length(); i++)
+    {
+        out << commands0[i].content;
+        out <<Qt::endl;
+        out <<Qt::endl;
+    }
+    for (int i=0; i<commands2.length(); i++)
+        if(commands2[i].unique&&!commands2[i].filter){
+            out << commands2[i].content;
+            out <<Qt::endl;
+            out <<Qt::endl;
+        }
+
+    wfile.close();
+}
 
 void MainWindow::loadFile(const QString &filePath, bool isRight)
 {
+
+}
+
+void MainWindow::loadCommands(const QString &fileName, QVector<PPC> &commands1, bool second){
+    QFile file(fileName);
+
+    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        // Handle error: file could not be opened
+        return;
+    }
+    QTextStream in(&file);
+    QString searchString = "case PPC_INST_";
+    QString searchString2 = "  switch (id)";
+      QString filterString = "tsimd";
+
+    int lineNumber = 0;
+    PPC *testppc = new PPC;
+    bool content=false;
+    bool foundedsw=false;
+
+    while (!in.atEnd()) {
+        QString line = in.readLine();
+        lineNumber++;
+        if(foundedsw){
+
+            if (line.contains(searchString, Qt::CaseInsensitive)) { // Case-insensitive search
+                qDebug() << "String found on line:" << lineNumber << " - " << line;
+                // Additional actions can be performed here, e.g., storing line numbers
+                int underscoreIndex = line.indexOf('_');
+                // line.remove(0, 6);
+                QString resultString = line.mid(underscoreIndex + 1);
+                resultString.remove(0, 5);
+                resultString.chop(1);
+
+                testppc->name=resultString;
+                testppc->sline=lineNumber;
+                content=true;
+                testppc->content.append(line);
+                testppc->content.append("\n");
+            }
+
+            else if (line.contains("break;", Qt::CaseInsensitive)) { // Case-insensitive search
+                qDebug() << "break found on line:" << lineNumber << " - " << line;
+                // Additional actions can be performed here, e.g., storing line numbers
+
+                testppc->eline=lineNumber;
+
+                if(second){
+                //  foreach(auto ppc2, commands1){
+                for(int j=0;j<commands0.length();j++){
+                    auto &ppc2 =commands0[j];
+                    if(ppc2.name==testppc->name){
+                        ppc2.unique=false;
+                        testppc->unique=false;
+                        if( ppc2.content!=testppc->content){
+                            ppc2.same=false;
+                            testppc->same=false;
+                        }
+                    }
+                }
+                }
+
+                testppc->content.append(line); //- break;
+                    //  testppc->content.append("\n");
+                commands1.append(*testppc);
+                //set default
+                content=false;
+                testppc->same=true;
+                testppc->unique=true;
+                testppc->filter=false;
+                testppc->content="";
+            }
+            else if (line.contains("return false;", Qt::CaseInsensitive)) {
+                break;
+            }
+            else{
+                if(content){
+                    testppc->content.append(line);
+                    testppc->content.append("\n");
+
+                    if(testppc->content.contains(filterString))//(QStringLiteral("\t"),Qt::CaseInsensitive))
+                        testppc->filter=true;
+
+                }
+            }
+
+        }
+
+        else{
+
+            if (line.contains(searchString2, Qt::CaseInsensitive)) foundedsw=true;
+        }
+    }
+
+    file.close();
 
 }
 
@@ -181,193 +268,14 @@ MainWindow::MainWindow(QWidget *parent)
      const auto cfg = loadConfig(QCoreApplication::applicationDirPath() + "/default.ini");
 
     //load of recomps
-    QString fileName = "D:/MT2/qt_project/m/recompiler.cpp";
-      QString fileName2 = "D:/MT2/qt_project/c/recompiler.cpp";
-    QFile file(fileName);
+    QString fileName = "D:/MT2/qt_project/c/recompiler.cpp";
+      QString fileName2 = "D:/MT2/qt_project/o/recompiler.cpp";
 
-    if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // Handle error: file could not be opened
-        return;
-    }
-    QTextStream in(&file);
-    QString searchString = "case PPC_INST_";
-     QString searchString2 = "  switch (id)";
-  //  QString filterString = "\t{}.u64 = {}.u64 & ~{}.u64;";
+    loadCommands(fileName,commands0,0);
+      loadCommands(fileName2,commands2,1);
 
-    int lineNumber = 0;
-    PPC *testppc = new PPC;
-    bool content=false;
-    bool foundedsw=false;
-
-    while (!in.atEnd()) {
-        QString line = in.readLine();
-        lineNumber++;
-        if(foundedsw){
-
-
-        if (line.contains(searchString, Qt::CaseInsensitive)) { // Case-insensitive search
-            qDebug() << "String found on line:" << lineNumber << " - " << line;
-            // Additional actions can be performed here, e.g., storing line numbers
-            int underscoreIndex = line.indexOf('_');
-         // line.remove(0, 6);
-            QString resultString = line.mid(underscoreIndex + 1);
-            resultString.remove(0, 5);
-            resultString.chop(1);
-
-
-            testppc->name=resultString;
-            testppc->sline=lineNumber;
-            content=true;
-              testppc->content.append(line);
-        }
-
-        else if (line.contains("break;", Qt::CaseInsensitive)) { // Case-insensitive search
-            qDebug() << "break found on line:" << lineNumber << " - " << line;
-            // Additional actions can be performed here, e.g., storing line numbers
-
-            testppc->eline=lineNumber;
-
-
-  //   testppc->content.append(line); - break;
-            commands1.append(*testppc);
-            //set default
-            content=false;
-            testppc->same=true;
-            testppc->unique=true;
-            testppc->filter=false;
-            testppc->content="";
-        }
-        else if (line.contains("return false;", Qt::CaseInsensitive)) {
-            break;
-        }
-        else{
-            if(content){
-                testppc->content.append(line);
-            }
-
-
-        }
-
-    }
-
-        else{
-
-            if (line.contains(searchString2, Qt::CaseInsensitive)) foundedsw=true;
-        }
-    }
-
-    file.close();
-
-foundedsw=false;
-    //load recomp 2
-    QFile file2(fileName2);
-
-    if (!file2.open(QIODevice::ReadOnly | QIODevice::Text)) {
-        // Handle error: file could not be opened
-        return;
-    }
-    QTextStream in2(&file2);
-
-     lineNumber = 0;
-
-    while (!in2.atEnd()) {
-        QString line = in2.readLine();
-        lineNumber++;
-
-
-  if(foundedsw){
-        if (line.contains(searchString, Qt::CaseInsensitive)) { // Case-insensitive search
-            qDebug() << "String found on line:" << lineNumber << " - " << line;
-            // Additional actions can be performed here, e.g., storing line numbers
-            int underscoreIndex = line.indexOf('_');
-            QString resultString = line.mid(underscoreIndex + 1);
-              //   QString filterString = "simd";
-            resultString.remove(0, 5);
-            resultString.chop(1);
-
-
-            testppc->name=resultString;
-            testppc->sline=lineNumber;
-            content=true;
-              testppc->content.append(line);
-        }
-
-
-
-        else if (line.contains("break;", Qt::CaseInsensitive)) { // Case-insensitive search
-            qDebug() << "break found on line:" << lineNumber << " - " << line;
-            // Additional actions can be performed here, e.g., storing line numbers
-
-            testppc->eline=lineNumber;
-
-            //  filter
-
-
-
-         //  foreach(auto ppc2, commands1){
-           for(int j=0;j<commands1.length();j++){
-          auto &ppc2 =commands1[j];
-               if(ppc2.name==testppc->name){
-                   ppc2.unique=false;
-                   testppc->unique=false;
-                   if( ppc2.content!=testppc->content){
-                        ppc2.same=false;
-                       testppc->same=false;
-                   }
-               }
-
-        }
-
-           if(testppc->content.contains(cfg.text))//(QStringLiteral("\t"),Qt::CaseInsensitive))
-               testppc->filter=true;
-          //   testppc->content.append(line); - break;
-            commands2.append(*testppc);
-        //set default
-            content=false;
-            testppc->same=true;
-            testppc->unique=true;
-              testppc->filter=false;
-            testppc->content="";
-
-        }
-        else if (line.contains("return false;", Qt::CaseInsensitive)) {
-            break;
-        }
-        else{
-            if(content){
-                testppc->content.append(line);
-            }
-
-
-        }
-
-
-  }
-
-  else{
-
-      if (line.contains(searchString2, Qt::CaseInsensitive)) foundedsw=true;
-  }
-
-    }
-
-    file2.close();
-
-    qDebug() << "PPC from 1:" <<  commands1.length();
-     qDebug() << "PPC from 2:" <<  commands2.length();
-
-    QString wfileName = "D:/MT2/qt_project/recompiler.cpp"; // Or provide a full path
-    QFile wfile(wfileName);
-    if (!wfile.open(QIODevice::WriteOnly | QIODevice::Text)) {
-        // Handle error: file could not be opened
-        qDebug() << "Could not open file for writing.";
-        return;
-    }
-    QTextStream out(&wfile);
-
-    out << commands1[0].content;
-
-        wfile.close();
+    qDebug() << "PPC from 1:" <<  commands0.length();
+    qDebug() << "PPC from 2:" <<  commands2.length();
 
     QWidget *central = new QWidget(this);
 QGridLayout *grid = new QGridLayout(central);
@@ -380,30 +288,18 @@ QGridLayout *grid = new QGridLayout(central);
     rightTextEdit1 = new QTextEdit(this);
     // Top-left
     QScrollArea *scrollAreaTL = new QScrollArea;
-
     scrollAreaTL->setWidgetResizable(true);
-     scrollAreaTL->setWidget(createScrollableButtonList("Top Left Button", buttons, leftTextEdit1));
+     scrollAreaTL->setWidget(createScrollableButtonList("Top Left Button", buttons, leftTextEdit1, commands0,0));
   grid->addWidget(scrollAreaTL, 0, 0);
-
     // Top-right
 QScrollArea *scrollAreaTR = new QScrollArea;
     scrollAreaTR->setWidgetResizable(true);
-    scrollAreaTR->setWidget(createScrollableButtonList2("Top Right Button"));
+    scrollAreaTR->setWidget(createScrollableButtonList("Top Right Button", buttons, rightTextEdit1, commands2,1));
     grid->addWidget(scrollAreaTR, 0, 1);
-
-
-
     leftTextEdit1->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
     grid->addWidget(leftTextEdit1, 1, 0);
-
-
-
     rightTextEdit1->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOn);
-
-
-
     grid->addWidget(rightTextEdit1, 1, 1);
-
     setCentralWidget(central);
 }
 

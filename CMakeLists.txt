@@ -12,8 +12,9 @@ add_executable(QtButtonGridApp
     main.cpp
     mainwindow.cpp
     mainwindow.h
-    CustomTextEdit.h
+    idbutton.h idbutton.cpp
+
 
 )
-
+#enable_language(CUDA)
 target_link_libraries(QtButtonGridApp PRIVATE Qt6::Widgets) 
